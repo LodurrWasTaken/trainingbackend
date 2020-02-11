@@ -1,0 +1,83 @@
+version: '3'
+services:
+  main:
+    build:
+      context: ./microservices/main
+      dockerfile: Dockerfile
+    restart: on-failure
+    volumes:
+      - ./microservices/main/src:/app/src
+      - /app/node_modules
+    ports:
+      - '3000:3000'
+    env_file:
+      - ./microservices/main/.env
+    depends_on:
+      - main-db
+    networks:
+      - microservices-network
+      - main-network
+
+  auth:
+    build:
+      context: ./microservices/auth
+      dockerfile: Dockerfile
+    restart: on-failure
+    volumes:
+      - ./microservices/auth/src:/app/src
+      - /app/node_modules
+    ports:
+      - '4000:4000'
+    env_file:
+      - ./microservices/auth/.env
+    depends_on:
+      - auth-db
+    networks:
+      - microservices-network
+      - auth-network
+
+  main-db:
+    image: postgres:10.7
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - main-db-data:/var/lib/postgresql/data
+    ports:
+      - '5433:5432'
+    networks:
+      - main-network
+
+  auth-db:
+    image: postgres:10.7
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    ports:
+      - '5434:5432'
+    networks:
+      - auth-network
+
+  redis:
+    image: redis:4.0-alpine
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    networks:
+      - auth-network
+
+volumes:
+  main-db-data:
+  auth-db-data:
+  redis-data:
+
+networks:
+  microservices-network:
+  main-network:
+  auth-network:
